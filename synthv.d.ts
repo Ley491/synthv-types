@@ -33,6 +33,17 @@ declare const SV: {
   blickRoundTo(b: number, interval: number): number;
 
   /**
+   * スクリプトパネルを再描画する（2026-03-30）
+   */
+  refreshSidePanel(): void;
+
+  /**
+   * WidgetValue（UI用の仮想オブジェクト）の型の追加（2026-03-30）
+   */
+  create(type: "WidgetValue"): WidgetValue;
+
+
+  /**
    * 新しくオブジェクトを作成します。
    */
   create(
@@ -135,7 +146,8 @@ declare const SV: {
   /**
    * `timeOut` ミリ秒後の `callback` 遅延呼び出しをスケジュールする。
    */
-  setTimeout(timeOut: number, callback: () => any): void;
+  // setTimeout(timeOut: number, callback: () => any): void;
+  setTimeout(timeOut: number, callback: () => void): void;  // 2026-03-30 変更
 
   /**
    * ユーザーがダイアログを閉じるまでスクリプトの実行をブロックする `SV.showCustomDialogAsync` の同期バージョン。
@@ -193,6 +205,7 @@ declare const SV: {
   T(text: string): string;
 };
 
+
 type Form = {
 
   /**
@@ -203,12 +216,14 @@ type Form = {
   /**
    * ダイアログの上部に表示されるメッセージ。
    */
-  message: string;
+  message?: string; // オプションの追加を許容（2026-03-30）
+  // message: string;
 
   /**
    * ダイアログの下部に表示されているプリセットボタン。
    */
-  buttons: "YesNoCancel" | "OkCancel";
+  buttons: string; // "YesNoCancel" | "OkCancel"; から変更（2026-03-30）
+  // buttons: "YesNoCancel" | "OkCancel";
 
   /**
    * ダイアログの主部に表示されるウィジェットの配列。
@@ -249,6 +264,21 @@ type Form = {
       type: "CheckBox";
       text: string;
       default: boolean;
+    }
+    // 拡張（2026-03-30）
+    | {
+      name: string;
+      type: string;
+      label?: string;
+      text?: string;
+      default?: any;
+      readOnly?: boolean;
+      format?: string;
+      minValue?: number;
+      maxValue?: number;
+      interval?: number;
+      height?: number;
+      choices?: Array<string>;
     }
   >;
 }
@@ -656,6 +686,20 @@ interface MainEditorView extends NestedObject {
   isMemoryManaged(): boolean;
 }
 
+// --- MainEditorView の追加API（2026-03-30）---
+interface MainEditorView {
+  /**
+   * 現在のトラックを設定する
+   */
+  setCurrentTrack(track: Track): void;
+
+  /**
+   * 現在の NoteGroup を設定する
+   */
+  setCurrentGroup(group: NoteGroupReference): void;
+}
+
+
 /**
  * `NestedObject` は, ホスト (Synthesizer V Studio) とクライアント (スクリプト環境) の間で受け渡すことができるすべてのオブジェクトの基底クラスです。プロジェクト内のすべてのものをインデックス化するためのツリー構造を実装しています。加えて, いくつかの UI 要素は `NestedObject` インターフェースを通して公開されています。
  */
@@ -766,6 +810,12 @@ interface Note extends NestedObject {
      * 代替発音用の要素 `number` の配列
      */
     alt: Array<number>;
+
+    /**
+     * 言語オーバーライドを追加（2026-03-30）
+     */
+    languageOverride?: string;
+
   };
 
   /**
@@ -802,6 +852,11 @@ interface Note extends NestedObject {
    * ユーザがノートに設定した音素をスペース区切りで返します。例: "hh ah ll ow"。音素が設定されていない場合は, デフォルトの発音ではなく空の文字列を返します (`SV.getPhonemesForGroup` をご参照ください) 。
    */
   getPhonemes(): string;
+
+  /**
+   * ノートの音素を設定する（2026-03-30）
+   */
+  setPhonemes(phonemes: string): void;
 
   /**
    * ピッチを MIDI ノート番号で取得します。C4 は 60 に対応します。
@@ -960,7 +1015,8 @@ interface NoteGroup extends NestedObject {
   /**
    * 添え字が `index` のノートを取得します。`NoteGroup` 内のノートは常に開始位置の順でソートされます。
    */
-  getNote(index: number): Note;
+  // getNote(index: number): Note;
+  getNote(index: number): Note; // 2026-03-30 変更
 
   /**
    * `NoteGroup` のノートの数を取得します。
@@ -1285,6 +1341,20 @@ interface NoteGroupReference extends NestedObject {
      */
     paramGender: number;
   };
+
+  // --- ScriptData 定義を追加（2026-03-30） ---
+  /**
+   * プロジェクトファイルに保存されるスクリプトデータを取得
+   */
+  getScriptData(key: string): string | null;
+  /**
+   * プロジェクトファイルに保存されるスクリプトデータを設定
+   */
+  setScriptData(key: string, value: string): void;
+  /**
+   * プロジェクトファイルに保存されるスクリプトデータを削除
+   */
+  removeScriptData(key: string): void;
 }
 
 
@@ -1721,7 +1791,8 @@ interface Track extends NestedObject {
 /**
  * ピアノロールの選択状態。
  */
-interface TrackInnerSelectionState extends NestedObject, SelectionStateBase, GroupSelection {
+// interface TrackInnerSelectionState extends NestedObject, SelectionStateBase, GroupSelection {
+interface TrackInnerSelectionState extends NestedObject, SelectionStateBase {   //GroupSelection を削除（2026-03-30）
 
   /**
    * この選択状態が対応しているすべてのオブジェクトタイプについて, 該当するオブジェクトの選択を解除します。選択に変更があった場合は真を返します。
@@ -1801,4 +1872,203 @@ interface TrackInnerSelectionState extends NestedObject, SelectionStateBase, Gro
    * `Note` の選択を解除します。選択が変更された場合, 真を返します。
    */
   unselectNote(note: Note): boolean;
+
+  // ---  TrackInnerSelectionState の定義を追加（2026-03-30） ---
+  /*
+  選択状態変更時のコールバック
+  */
+  registerSelectionCallback(
+    cb: (type: string, isSelected: boolean) => void
+  ): void;
+
+  /*
+  選択クリア時のコールバック
+  */
+  registerClearCallback(
+    cb: (type: string) => void
+  ): void;
+
 }
+
+
+// --- WidgetValue（UI用の仮想オブジェクト）の型の追加（2026-03-30）---
+interface WidgetValue {
+  /*
+  現在の値（Slider: number, TextBox: string, Button: boolean）
+  */
+  getValue(): any;
+  setValue(v: any): void;
+
+  /*
+  有効/無効
+  */
+  setEnabled(v: boolean): void;
+
+  /*
+  値が変わったときのコールバック
+  */
+  setValueChangeCallback(cb: () => void): void;
+}
+
+// --- NoteAttributes の定義を追加（2026-03-30） ---
+interface NoteAttributes {
+  /*
+  言語オーバーライド
+  */
+  languageOverride?: string;
+}
+
+
+// --- functionの定義（2026-03-30）---
+/*
+スクリプトのファイル情報
+*/
+declare function getClientInfo(): {
+  name: string; //スクリプト名
+  author: string; //作者名
+  version?: string | number; //バージョン（文字列または数値）
+  versionNumber?: number; //バージョン番号（数値）
+  minEditorVersion: number; //最小エディタバージョン（数値）
+  type?: SidePanelSection; //スクリプトの種類
+  category?: string; //スクリプトのカテゴリ
+};
+
+/*
+多言語対応（日本語への翻訳はlangCode == "ja-jp"）
+*/
+declare function getTranslations(
+  langCode: string  //言語コード
+): Array<[string, string]>;  // [表示名, 翻訳後文字列]
+
+
+// ---- SidePanelSection UI ----
+
+declare interface SidePanelSection {
+  title: string;
+  rows: Row[];
+}
+
+type Row =
+  | ContainerRow  // コンテナ
+  | LabelRow;     // ラベル
+
+interface LabelRow {
+  type: "Label";
+  text: string; // 表示名
+}
+
+interface ContainerRow {
+  type: "Container";
+  columns: Widget[]; // ウィジェットの配列
+}
+
+// -------------------------------
+// Widget 共通
+// -------------------------------
+interface BaseWidget {
+  // type: string; // ウィジェットの種類 （型推論で判別できるため不要）
+  width?: number; // 幅
+}
+
+// -------------------------------
+// Button
+// -------------------------------
+interface ButtonWidget extends BaseWidget {
+  type: "Button";
+  text: string;
+  value: any; // WidgetValue or function
+}
+
+// -------------------------------
+// Slider
+// -------------------------------
+interface SliderWidget extends BaseWidget {
+  type: "Slider";
+  text: string; // 表示名
+  format: string; // フォーマット
+  minValue: number; // 最小値
+  maxValue: number; // 最大値
+  interval: number; // インターバル
+  value: WidgetValue; // 値
+}
+
+// -------------------------------
+// ComboBox
+// -------------------------------
+interface ComboBoxWidget extends BaseWidget {
+  /*
+  プルダウンメニュー
+  */
+  type: "ComboBox";
+  choices: string[]; // 選択肢
+  value: WidgetValue; // 値
+}
+
+// -------------------------------
+// CheckBox
+// -------------------------------
+interface CheckBoxWidget extends BaseWidget {
+  /*
+  チェックボックス
+  */
+  type: "CheckBox";
+  text: string; // 表示名
+  value: WidgetValue; // 値
+}
+
+// -------------------------------
+// TextArea
+// -------------------------------
+interface TextAreaWidget extends BaseWidget {
+  /*
+  テキストエリア
+  */
+  type: "TextArea";
+  value: WidgetValue; // 値
+  height: number; // 高さ
+}
+
+// -------------------------------
+// TextBox
+// -------------------------------
+interface TextBoxWidget extends BaseWidget {
+  /*
+  テキストボックス
+  */
+  type: "TextBox";
+  value: WidgetValue; // 値
+  readOnly?: boolean; // 読み取り専用
+}
+
+// -------------------------------
+// WidgetValue
+// -------------------------------
+interface WidgetValue {
+  /*
+  値を取得する
+  */
+  getValue(): any;
+  /*
+  値を設定する
+  */
+  setValue(v: any): void;
+  /*
+  値が変わったときのコールバックを設定する
+  */
+  setValueChangeCallback(cb: () => void): void;
+  /*
+  有効/無効を設定する
+  */
+  setEnabled?(enabled: boolean): void;
+}
+
+// -------------------------------
+// Widget Union
+// -------------------------------
+type Widget =
+  | ButtonWidget  // ボタン
+  | SliderWidget  // スライダー
+  | ComboBoxWidget  // プルダウンメニュー
+  | CheckBoxWidget  // チェックボックス
+  | TextAreaWidget  // テキストエリア
+  | TextBoxWidget;  // テキストボックス
