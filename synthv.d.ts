@@ -2040,27 +2040,6 @@ interface TextBoxWidget extends BaseWidget {
   readOnly?: boolean; // 読み取り専用
 }
 
-// -------------------------------
-// WidgetValue
-// -------------------------------
-interface WidgetValue {
-  /*
-  値を取得する
-  */
-  getValue(): any;
-  /*
-  値を設定する
-  */
-  setValue(v: any): void;
-  /*
-  値が変わったときのコールバックを設定する
-  */
-  setValueChangeCallback(cb: () => void): void;
-  /*
-  有効/無効を設定する
-  */
-  setEnabled?(enabled: boolean): void;
-}
 
 // -------------------------------
 // Widget Union
