@@ -1,6 +1,7 @@
 # SynthV-Types
 
 SynthV-Types は JavaScript で Synthesizer V Studio のスクリプトを作成するための型定義コレクションです。
+Ley［líː］によってカスタマイズされていますが正常運用できるかは不明です。
 
 ## Usage
 
